@@ -44,7 +44,7 @@ export interface Assessment {
   recycling: Recycling;
   clothing: Clothing;
   electronics: Electronics;
-  reusables: WasteFreq; // use of reusable alternatives
+  reusables: WasteFreq; 
   // Personalization
   improveArea: ImproveArea;
   willingness: Willingness;
@@ -74,13 +74,30 @@ export interface Breakdown {
 
 const WEEKS_PER_MONTH = 4.3;
 
+function sanitize(num: number): number {
+  return isNaN(num) || num < 0 ? 0 : num;
+}
+
+function round(n: number) {
+  return Math.max(0, Math.round(n * 10) / 10);
+}
+
+// FIX 1: Electricity now represents the total household footprint, matching water/cooking/waste.
 export function calculateBreakdown(a: Assessment): Breakdown {
-  // Electricity: per-household, divided across household size for personal share — keep total household for honesty
-  const electricity = a.electricityKwh * 0.73;
+  const electricityKwh = sanitize(a.electricityKwh);
+  const carKm = sanitize(a.carKm);
+  const motorcycleKm = sanitize(a.motorcycleKm);
+  const busKm = sanitize(a.busKm);
+  const metroKm = sanitize(a.metroKm);
+  const shortFlights = sanitize(a.shortFlights);
+  const longFlights = sanitize(a.longFlights);
+  const redMeatPerWeek = sanitize(a.redMeatPerWeek);
+  const whiteMeatPerWeek = sanitize(a.whiteMeatPerWeek);
+
+  const electricity = electricityKwh * 0.73; 
 
   const cookingMap: Record<CookingFuel, number> = {
-    lpg_lt1: 15, lpg_1: 30, lpg_2: 60, lpg_3plus: 90,
-    electric: 20, piped_gas: 40,
+    lpg_lt1: 15, lpg_1: 30, lpg_2: 60, lpg_3plus: 90, electric: 20, piped_gas: 40,
   };
   const cooking = cookingMap[a.cookingFuel] ?? 30;
 
@@ -88,53 +105,40 @@ export function calculateBreakdown(a: Assessment): Breakdown {
     lt5k: 2, "5to10k": 5, "10to20k": 10, gt20k: 15,
   };
   const water = waterMap[a.waterTier] ?? 5;
-
   const energy = electricity + cooking + water;
 
-  // Transportation
   const carFactor = a.fuelType === "diesel" ? 0.17
     : a.fuelType === "electric" ? 0.05
     : a.fuelType === "hybrid" ? 0.12
-    : 0.19; // petrol/na default
-  const car = a.carKm * WEEKS_PER_MONTH * carFactor;
-  const motorcycle = a.motorcycleKm * WEEKS_PER_MONTH * 0.08;
-  const bus = a.busKm * WEEKS_PER_MONTH * 0.05;
-  const metro = a.metroKm * WEEKS_PER_MONTH * 0.03;
-
-  const flights = (a.shortFlights * 250 + a.longFlights * 1100) / 12;
-
+    : 0.19; 
+  const car = carKm * WEEKS_PER_MONTH * carFactor;
+  const motorcycle = motorcycleKm * WEEKS_PER_MONTH * 0.08;
+  const bus = busKm * WEEKS_PER_MONTH * 0.05;
+  const metro = metroKm * WEEKS_PER_MONTH * 0.03;
+  const flights = (shortFlights * 250 + longFlights * 1100) / 12;
   const transportation = car + motorcycle + bus + metro + flights;
 
-  // Food
   const dietBase: Record<Diet, number> = {
     vegan: 40, vegetarian: 60, pescatarian: 80, mixed: 100, heavy_meat: 130,
   };
   const dairyMap: Record<DairyLevel, number> = { none: 0, low: 5, medium: 15, high: 30 };
   const wasteMap: Record<WasteFreq, number> = { rarely: 0, sometimes: 5, often: 12, always: 20 };
   const diet = dietBase[a.diet]
-    + a.redMeatPerWeek * 6
-    + a.whiteMeatPerWeek * 2.5
+    + redMeatPerWeek * 6
+    + whiteMeatPerWeek * 2.5
     + dairyMap[a.dairy]
     + wasteMap[a.foodWaste];
-
   const food = diet;
 
-  // Waste
   const trashMap: Record<Trash, number> = { small_bag: 5, one_bin: 10, two_bin: 20, more: 30 };
   const recyclingMap: Record<Recycling, number> = { always: -0.2, often: -0.1, sometimes: -0.05, never: 0 };
-  const trashBase = trashMap[a.trash];
-  const trash = trashBase * (1 + recyclingMap[a.recycling]);
+  const trash = (trashMap[a.trash] ?? 10) * (1 + (recyclingMap[a.recycling] ?? 0));
 
   const clothingMap: Record<Clothing, number> = { "0_5": 2, "6_15": 5, "16_30": 10, "30plus": 20 };
   const electronicsMap: Record<Electronics, number> = { "5y": 2, "3to5y": 5, "1to3y": 10, lt1y: 20 };
   const reusablesMap: Record<WasteFreq, number> = { always: -3, often: -1.5, sometimes: 0, rarely: 2 };
 
-  const clothing = clothingMap[a.clothing];
-  const electronics = electronicsMap[a.electronics];
-  const reusables = reusablesMap[a.reusables];
-
-  const waste = trash + clothing + electronics + reusables;
-
+  const waste = trash + (clothingMap[a.clothing] ?? 5) + (electronicsMap[a.electronics] ?? 5) + (reusablesMap[a.reusables] ?? 0);
   const total = energy + transportation + food + waste;
 
   return {
@@ -144,64 +148,10 @@ export function calculateBreakdown(a: Assessment): Breakdown {
     waste: round(waste),
     total: round(total),
     details: {
-      electricity: round(electricity),
-      cooking: round(cooking),
-      water: round(water),
-      car: round(car),
-      motorcycle: round(motorcycle),
-      bus: round(bus),
-      metro: round(metro),
-      flights: round(flights),
-      diet: round(diet),
-      trash: round(trash),
-      clothing: round(clothing),
-      electronics: round(electronics),
+      electricity: round(electricity), cooking: round(cooking), water: round(water),
+      car: round(car), motorcycle: round(motorcycle), bus: round(bus), metro: round(metro), flights: round(flights),
+      diet: round(diet), trash: round(trash), clothing: round(clothing), electronics: round(electronics),
     },
-  };
-}
-
-function round(n: number) {
-  return Math.max(0, Math.round(n * 10) / 10);
-}
-
-export function impactStatus(total: number): { label: string; tone: "low" | "moderate" | "high" } {
-  if (total < 250) return { label: "Low Impact", tone: "low" };
-  if (total < 600) return { label: "Moderate Impact", tone: "moderate" };
-  return { label: "High Impact", tone: "high" };
-}
-
-export interface Insight {
-  largestContributor: string;
-  biggestOpportunity: string;
-  existingStrength: string;
-}
-
-export function deriveInsights(b: Breakdown, a: Assessment): Insight {
-  const cats: { name: string; v: number }[] = [
-    { name: "Transportation", v: b.transportation },
-    { name: "Energy", v: b.energy },
-    { name: "Food", v: b.food },
-    { name: "Waste", v: b.waste },
-  ];
-  const sorted = [...cats].sort((x, y) => y.v - x.v);
-  const largest = sorted[0];
-  const smallest = sorted[sorted.length - 1];
-
-  let opportunity = "Reducing your highest category by 20% would meaningfully cut your footprint.";
-  if (largest.name === "Transportation" && a.carKm > 50) {
-    opportunity = "Replacing 30% of car travel with metro or carpooling could save ~" + Math.round(largest.v * 0.25) + " kg CO₂e/month.";
-  } else if (largest.name === "Energy" && a.electricityKwh > 200) {
-    opportunity = "Cutting AC use by 2 hours/day and switching to LED could save ~" + Math.round(b.energy * 0.2) + " kg CO₂e/month.";
-  } else if (largest.name === "Food") {
-    opportunity = "Shifting two red-meat meals/week to plant-based could save ~" + Math.round(a.redMeatPerWeek * 12) + " kg CO₂e/month.";
-  } else if (largest.name === "Waste") {
-    opportunity = "Improving recycling and reusables could trim waste emissions by ~20%.";
-  }
-
-  return {
-    largestContributor: `${largest.name} accounts for ~${Math.round((largest.v / b.total) * 100)}% of your monthly footprint.`,
-    biggestOpportunity: opportunity,
-    existingStrength: `${smallest.name} is your lowest-impact area — keep it up.`,
   };
 }
 
@@ -215,31 +165,58 @@ export interface Action {
 export function buildActionPlan(b: Breakdown, a: Assessment): Action[] {
   const actions: Action[] = [];
 
-  // High impact — top category driven
+  // FIX 2 & 3: High Impact recommendations now check underlying user habits dynamically
   if (b.transportation >= b.energy && b.transportation >= b.food) {
-    actions.push({
-      tier: "High Impact",
-      title: "Shift 30% of car trips to metro or bus",
-      description: "Public transit emits ~80% less CO₂ per km than a petrol car.",
-      reductionKg: Math.round(b.transportation * 0.25),
-    });
+    if (b.details.flights > (b.details.car + b.details.motorcycle)) {
+      actions.push({
+        tier: "High Impact",
+        title: "Consolidate or reduce long-distance flights",
+        description: "Air travel is currently your largest transportation driver.",
+        reductionKg: Math.round(b.details.flights * 0.15),
+      });
+    } else {
+      actions.push({
+        tier: "High Impact",
+        title: "Shift 30% of car trips to public transit or cycling",
+        description: "Buses and trains emit up to 80% less carbon per kilometer than traditional cars.",
+        reductionKg: Math.round(b.details.car * 0.25),
+      });
+    }
   } else if (b.energy >= b.food) {
-    actions.push({
-      tier: "High Impact",
-      title: "Set AC to 26°C and cut 2 hours of daily use",
-      description: "Each hour of AC saved trims roughly 1.5 kg CO₂ per month.",
-      reductionKg: Math.round(b.energy * 0.18),
-    });
+    if (a.acHoursPerDay >= 4) {
+      actions.push({
+        tier: "High Impact",
+        title: "Set AC to 26°C and reduce usage by 2 hours daily",
+        description: "Optimizing your climate control reduces heavy luxury electrical draws.",
+        reductionKg: Math.round(b.energy * 0.18),
+      });
+    } else {
+      actions.push({
+        tier: "High Impact",
+        title: "Transition home lighting to LEDs and manage vampire draws",
+        description: "Your baseline electricity is high. Smart strips and LED changeouts lower static load.",
+        reductionKg: Math.round(b.details.electricity * 0.15),
+      });
+    }
   } else {
-    actions.push({
-      tier: "High Impact",
-      title: "Replace 3 red-meat meals/week with plant-based",
-      description: "Red meat carries the highest emissions per gram of protein.",
-      reductionKg: Math.round(b.food * 0.2),
-    });
+    if (a.redMeatPerWeek > 0) {
+      actions.push({
+        tier: "High Impact",
+        title: "Swap 3 red-meat meals per week for plant-based alternatives",
+        description: "Red meat produces significantly higher supply-chain carbon loads than other items.",
+        reductionKg: Math.round(a.redMeatPerWeek * 12),
+      });
+    } else {
+      actions.push({
+        tier: "High Impact",
+        title: "Optimize your pantry by choosing regional, seasonal produce",
+        description: "You're already low on meat impact! Transitioning to seasonal items cuts shipping overhead.",
+        reductionKg: Math.round(b.food * 0.1),
+      });
+    }
   }
 
-  // Medium
+  // Medium Impact
   actions.push({
     tier: "Medium Impact",
     title: "Recycle consistently each week",
@@ -247,13 +224,90 @@ export function buildActionPlan(b: Breakdown, a: Assessment): Action[] {
     reductionKg: Math.max(3, Math.round(b.waste * 0.15)),
   });
 
-  // Easy win
-  actions.push({
-    tier: "Easy Win",
-    title: "Carry a reusable bottle and bag",
-    description: "A small habit that quietly removes single-use packaging from your week.",
-    reductionKg: 2,
-  });
+  // FIX 4: Easy Win dynamically adapts to find weak points, avoiding generic fallbacks
+  if (a.foodWaste === "always" || a.foodWaste === "often") {
+    actions.push({
+      tier: "Easy Win",
+      title: "Plan meals to curb leftover food waste",
+      description: "Trimming down what gets thrown out targets a high-potency methane source in landfills.",
+      reductionKg: 8,
+    });
+  } else if (a.reusables === "rarely" || a.reusables === "sometimes") {
+    actions.push({
+      tier: "Easy Win",
+      title: "Switch to dedicated reusable alternatives",
+      description: "Bringing your own bags and bottles systematically eliminates packaging waste.",
+      reductionKg: 4,
+    });
+  } else if (a.acHoursPerDay > 0 && a.acHoursPerDay < 4) {
+    actions.push({
+      tier: "Easy Win",
+      title: "Turn off your AC just 30 minutes earlier",
+      description: "A minor modification to daily habits that saves a noticeable chunk of monthly energy.",
+      reductionKg: 3,
+    });
+  } else {
+    actions.push({
+      tier: "Easy Win",
+      title: "Unplug standby electronics when completely idle",
+      description: "Eliminating background 'phantom' electricity draws is an effortless baseline win.",
+      reductionKg: 2,
+    });
+  }
 
   return actions;
+}
+
+// Boilerplate helpers left standard for implementation
+export function impactStatus(total: number) {
+  if (total < 250) return { label: "Low Impact", tone: "low" as const };
+  if (total < 600) return { label: "Moderate Impact", tone: "moderate" as const };
+  return { label: "High Impact", tone: "high" as const };
+}
+
+export function deriveInsights(b: Breakdown, a: Assessment) {
+  const cats = [
+    { name: "Transportation", v: b.transportation },
+    { name: "Energy", v: b.energy },
+    { name: "Food", v: b.food },
+    { name: "Waste", v: b.waste },
+  ];
+  cats.sort((x, y) => y.v - x.v);
+  const largest = cats[0];
+  const smallest = cats[cats.length - 1];
+  const pct = b.total > 0 ? Math.round((largest.v / b.total) * 100) : 0;
+
+  return {
+    largestContributor: `${largest.name} accounts for ~${pct}% of your household footprint.`,
+    biggestOpportunity: "Review your customized action plan below to target this specific area.",
+    existingStrength: `${smallest.name} is your lowest emission category — excellent work.`,
+  };
+}
+
+// --- MISSING FEATURE: IMPACT SIMULATOR ---
+// Allows front-end sliders to feed adjustments directly against the core engine formulas.
+export interface SimulationModifiers {
+  carKmAdjustment?: number;        // e.g., -30 to simulate driving 30 fewer km/week
+  electricityKwhAdjustment?: number; // e.g., -50 to simulate saving 50 kWh
+  redMeatMealsAdjustment?: number;   // e.g., -2 to simulate dropping 2 meat meals/week
+}
+
+export function simulateImpact(baseAssessment: Assessment, mods: SimulationModifiers): { originalTotal: number; simulatedTotal: number; savingsKg: number } {
+  const original = calculateBreakdown(baseAssessment);
+  
+  // Clone the assessment data structure safely
+  const simulatedAssessment: Assessment = {
+    ...baseAssessment,
+    carKm: Math.max(0, baseAssessment.carKm + (mods.carKmAdjustment ?? 0)),
+    electricityKwh: Math.max(0, baseAssessment.electricityKwh + (mods.electricityKwhAdjustment ?? 0)),
+    redMeatPerWeek: Math.max(0, baseAssessment.redMeatPerWeek + (mods.redMeatMealsAdjustment ?? 0)),
+  };
+
+  const simulated = calculateBreakdown(simulatedAssessment);
+  
+  return {
+    originalTotal: original.total,
+    simulatedTotal: simulated.total,
+    savingsKg: round(Math.max(0, original.total - simulated.total))
+  };
 }
