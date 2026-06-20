@@ -127,3 +127,63 @@ function ProgressPage() {
     </div>
   );
 }
+
+type ChartRow = {
+  name: string;
+  date: string;
+  Total: number;
+  Energy: number;
+  Transportation: number;
+  Food: number;
+  Waste: number;
+};
+
+function MonthlyTrendSummary({ data }: { data: ChartRow[] }) {
+  const latest = data[data.length - 1];
+  const previous = data.length > 1 ? data[data.length - 2] : null;
+  const totals = data.map((d) => d.Total);
+  const average = totals.reduce((a, b) => a + b, 0) / totals.length;
+  const best = Math.min(...totals);
+  const change = previous ? latest.Total - previous.Total : 0;
+  const changePct = previous && previous.Total > 0 ? (change / previous.Total) * 100 : 0;
+  const trendDown = change < 0;
+
+  const stats = [
+    { label: "Latest footprint", value: `${latest.Total.toFixed(1)} kg`, sub: latest.date },
+    {
+      label: "Change vs previous",
+      value: previous ? `${trendDown ? "↓" : change > 0 ? "↑" : "•"} ${Math.abs(changePct).toFixed(1)}%` : "—",
+      sub: previous ? `${change >= 0 ? "+" : ""}${change.toFixed(1)} kg` : "Need 2+ assessments",
+      tone: previous ? (trendDown ? "good" : change > 0 ? "warn" : "neutral") : "neutral",
+    },
+    { label: "Average", value: `${average.toFixed(1)} kg`, sub: `${data.length} assessment${data.length === 1 ? "" : "s"}` },
+    { label: "Best month", value: `${best.toFixed(1)} kg`, sub: "Lowest recorded" },
+  ] as const;
+
+  return (
+    <div className="card-soft p-6">
+      <h2 className="font-display text-lg font-semibold text-leaf-600">Monthly trend summary</h2>
+      <p className="mt-1 text-sm text-muted-foreground">A snapshot of how your footprint is moving.</p>
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {stats.map((s) => (
+          <div key={s.label} className="rounded-xl border border-border bg-card p-4">
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">{s.label}</div>
+            <div
+              className={
+                "mt-1 font-display text-2xl font-semibold " +
+                ("tone" in s && s.tone === "good"
+                  ? "text-leaf-600"
+                  : "tone" in s && s.tone === "warn"
+                    ? "text-amber-600"
+                    : "text-leaf-600")
+              }
+            >
+              {s.value}
+            </div>
+            <div className="mt-0.5 text-xs text-muted-foreground">{s.sub}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
