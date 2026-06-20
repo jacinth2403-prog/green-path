@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import type { Assessment, Breakdown } from "@/lib/carbon";
 import { calculateBreakdown, deriveInsights, buildActionPlan, impactStatus } from "@/lib/carbon";
@@ -42,16 +42,19 @@ export function Dashboard({ assessment, breakdown, onRetake }: Props) {
               {status.label}
             </div>
             <div className="mt-5 flex flex-wrap gap-2">
-              <button onClick={onRetake} className="rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium hover:bg-leaf-50">Retake assessment</button>
+              <button onClick={onRetake} className="rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium hover:bg-leaf-5">Retake assessment</button>
             </div>
           </div>
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
+          {/* Sizing Guard Fix: Explicit min-height & width percentage adjustment to prevent ResponsiveContainer size loops */}
+          <div className="h-72 min-h-[288px] w-full max-w-[99%]">
+            <ResponsiveContainer width="99%" height="100%">
               <PieChart>
                 <Pie data={pieData} dataKey="value" innerRadius={62} outerRadius={100} paddingAngle={2} stroke="none">
                   {pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                 </Pie>
-                <Tooltip formatter={(v: number) => `${v.toFixed(1)} kg`} />
+                <Tooltip
+                  formatter={(v: number) => [`${v.toFixed(1)} kg CO₂e`, "Emissions"]}
+                />
                 <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
               </PieChart>
             </ResponsiveContainer>
@@ -101,7 +104,7 @@ export function Dashboard({ assessment, breakdown, onRetake }: Props) {
       </div>
 
       {/* Simulator */}
-      <Simulator assessment={assessment} />
+      <Simulator assessment={assessment} original={breakdown} />
     </section>
   );
 }
@@ -128,56 +131,83 @@ function Stat({ label, value, tone }:{ label: string; value: string; tone: "mute
   );
 }
 
-function Simulator({ assessment }:{ assessment: Assessment }) {
-  const [carCut, setCarCut] = useState(0);
-  const [acCut, setAcCut] = useState(0);
-  const [redMeatCut, setRedMeatCut] = useState(0);
-  const [wasteCut, setWasteCut] = useState(0);
+function Simulator({ assessment, original }:{ assessment: Assessment; original: Breakdown }) {
+  const [carKmDelta, setCarKmDelta] = useState(0);
+  const [electricityDelta, setElectricityDelta] = useState(0);
+  const [redMeatDelta, setRedMeatDelta] = useState(0);
 
-  const adjusted: Assessment = {
+  // Auto-Reset Fix: Wipes state cleans values instantly if baseline model values swap
+  useEffect(() => {
+    setCarKmDelta(0);
+    setElectricityDelta(0);
+    setRedMeatDelta(0);
+  }, [assessment.id, assessment.carKm, assessment.electricityKwh, assessment.redMeatPerWeek]);
+
+  const simulatedAssessment: Assessment = {
     ...assessment,
-    carKm: assessment.carKm * (1 - carCut / 100),
-    electricityKwh: assessment.electricityKwh * (1 - (acCut * 0.6) / 100),
-    redMeatPerWeek: Math.max(0, assessment.redMeatPerWeek * (1 - redMeatCut / 100)),
+    carKm: Math.max(0, assessment.carKm - carKmDelta),
+    electricityKwh: Math.max(0, assessment.electricityKwh - electricityDelta),
+    redMeatPerWeek: Math.max(0, assessment.redMeatPerWeek - redMeatDelta),
   };
-  const wasteFactor = 1 - wasteCut / 100;
-  const original = calculateBreakdown(assessment);
-  let projected = calculateBreakdown(adjusted);
-  projected = { ...projected, waste: projected.waste * wasteFactor, total: projected.total - projected.waste * (1 - wasteFactor) };
-  projected.total = Math.max(0, projected.total);
 
+  const projected = calculateBreakdown(simulatedAssessment);
   const reduction = Math.max(0, original.total - projected.total);
 
   return (
     <div className="card-soft p-6 sm:p-8">
-      <h3 className="font-display text-xl font-semibold text-leaf-600">🌱 Impact simulator</h3>
-      <p className="mt-1 text-sm text-muted-foreground">Slide the levers — see your projected footprint update instantly.</p>
+      <h3 className="font-display text-xl font-semibold text-leaf-600">🌱 Impact Simulator</h3>
+      <p className="mt-1 text-sm text-muted-foreground">Adjust absolute values below to simulate direct reductions against your actual calculation engine.</p>
 
-      <div className="mt-6 grid gap-5 md:grid-cols-2">
-        <Slider label="Reduce car travel" value={carCut} onChange={setCarCut} />
-        <Slider label="Reduce AC usage" value={acCut} onChange={setAcCut} />
-        <Slider label="Reduce red meat" value={redMeatCut} onChange={setRedMeatCut} />
-        <Slider label="Reduce waste" value={wasteCut} onChange={setWasteCut} />
+      <div className="mt-6 grid gap-5 md:grid-cols-3">
+        <Slider 
+          label="Reduce Car Mileage" 
+          value={carKmDelta} 
+          max={assessment.carKm} 
+          unit="km/wk" 
+          onChange={setCarKmDelta} 
+        />
+        <Slider 
+          label="Reduce Electricity Consumption" 
+          value={electricityDelta} 
+          max={assessment.electricityKwh} 
+          unit="kWh/mo" 
+          onChange={setElectricityDelta} 
+        />
+        <Slider 
+          label="Reduce Red Meat Meals" 
+          value={redMeatDelta} 
+          max={assessment.redMeatPerWeek} 
+          unit="meals/wk" 
+          onChange={setRedMeatDelta} 
+        />
       </div>
 
       <div className="mt-6 grid gap-5 rounded-xl bg-leaf-50 p-5 md:grid-cols-3">
-        <Stat label="Current" value={`${original.total.toFixed(1)} kg`} tone="muted" />
-        <Stat label="Projected" value={`${projected.total.toFixed(1)} kg`} tone="primary" />
-        <Stat label="Potential reduction" value={`−${reduction.toFixed(1)} kg`} tone="accent" />
+        <Stat label="Current Baseline" value={`${original.total.toFixed(1)} kg`} tone="muted" />
+        <Stat label="Projected Footprint" value={`${projected.total.toFixed(1)} kg`} tone="primary" />
+        <Stat label="Net Savings Potential" value={`−${reduction.toFixed(1)} kg`} tone="accent" />
       </div>
     </div>
   );
 }
 
-function Slider({ label, value, onChange }:{ label: string; value: number; onChange: (n: number) => void }) {
+function Slider({ label, value, max, unit, onChange }:{ label: string; value: number; max: number; unit: string; onChange: (n: number) => void }) {
+  const isZeroBaseline = max <= 0;
+
   return (
-    <div>
+    <div className={isZeroBaseline ? "opacity-40 pointer-events-none" : ""}>
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium">{label}</span>
-        <span className="text-sm font-semibold text-leaf-500">−{value}%</span>
+        <span className="text-sm font-semibold text-leaf-500">
+          {isZeroBaseline ? "0" : `-${value}`} {unit}
+        </span>
       </div>
       <input
-        type="range" min={0} max={100} value={value}
+        type="range" 
+        min={0} 
+        max={isZeroBaseline ? 100 : Math.ceil(max)} 
+        value={value}
+        disabled={isZeroBaseline}
         onChange={(e) => onChange(Number(e.target.value))}
         className="mt-2 w-full accent-leaf-300"
       />
