@@ -48,14 +48,19 @@ function ProgressPage() {
       {history.length === 0 ? (
         <div className="card-soft mt-8 p-12 text-center">
           <div className="text-5xl">🌱</div>
-          <h2 className="mt-4 font-display text-xl font-semibold text-leaf-600">No assessments yet</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Take your first assessment to start tracking.</p>
-          <Link to="/" className="mt-5 inline-block rounded-lg bg-leaf-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-leaf-600">Start assessment</Link>
+          <h2 className="mt-4 font-display text-xl font-semibold text-leaf-600">No history yet</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Progress shows up once you've saved a few assessments. Try one this month, then come back next month — small, repeated check-ins are how the trend takes shape.
+          </p>
+          <Link to="/" className="mt-5 inline-block rounded-lg bg-leaf-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-leaf-600">Take an assessment</Link>
         </div>
       ) : (
         <div className="mt-8 space-y-6">
+          <MonthlyTrendSummary data={data} />
+
           <div className="card-soft p-6">
-            <h2 className="font-display text-lg font-semibold text-leaf-600">Total footprint trend</h2>
+            <h2 className="font-display text-lg font-semibold text-leaf-600">Historical carbon footprint</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Total monthly kg CO₂e across all saved assessments.</p>
             <div className="mt-4 h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={data}>
