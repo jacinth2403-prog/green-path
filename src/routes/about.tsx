@@ -47,64 +47,79 @@ function AboutPage() {
       <section className="mt-12">
         <h2 className="font-display text-xl font-semibold text-leaf-600">How it works</h2>
         <ol className="mt-4 space-y-2">
-          {FLOW.map((step, i) => (
-            <li key={step.title}>
-              <div className="flex gap-3 rounded-xl border border-border bg-card p-4">
-                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-leaf-100 text-sm font-semibold text-leaf-600">
-                  {i + 1}
-                </span>
-                <div>
-                  <div className="font-medium text-leaf-600">{step.title}</div>
-                  <div className="mt-0.5 text-sm text-foreground/75">{step.desc}</div>
-                </div>
-              </div>
-              {i < FLOW.length - 1 && (
-                <div aria-hidden className="my-1 flex justify-center text-leaf-400">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 5v14" />
-                    <path d="m6 13 6 6 6-6" />
-                  </svg>
-                </div>
-              )}
-            </li>
-          ))}
+          {<section className="mt-12">
+  <h2 className="font-display text-xl font-semibold text-leaf-600">
+    Simple Process
+  </h2>
+
+  <div className="mt-4 grid gap-4 md:grid-cols-3">
+    <div className="rounded-xl border border-border bg-card p-4">
+      <div className="font-medium text-leaf-600">1. Assess</div>
+      <div className="mt-1 text-sm text-foreground/75">
+        Answer a short lifestyle questionnaire.
+      </div>
+    </div>
+
+    <div className="rounded-xl border border-border bg-card p-4">
+      <div className="font-medium text-leaf-600">2. Understand</div>
+      <div className="mt-1 text-sm text-foreground/75">
+        Explore personalized insights and recommendations.
+      </div>
+    </div>
+
+    <div className="rounded-xl border border-border bg-card p-4">
+      <div className="font-medium text-leaf-600">3. Improve</div>
+      <div className="mt-1 text-sm text-foreground/75">
+        Track progress and reduce your footprint over time.
+      </div>
+    </div>
+  </div>
+</section>
         </ol>
       </section>
 
-      <section className="mt-12 space-y-3">
-        <h2 className="font-display text-xl font-semibold text-leaf-600">Methodology</h2>
-        <p className="text-foreground/80 leading-relaxed">
-          Carbon emissions are estimated using <b>activity-based calculations</b>: each lifestyle input you provide is
-          multiplied by a published <b>emission factor</b> (kg CO₂e per unit) and aggregated into a monthly total. We
-          group activities into four everyday categories:
-        </p>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          {CATEGORIES.map((c) => (
-            <div key={c.name} className="rounded-xl border border-border bg-card p-4">
-              <div className="font-medium text-leaf-600">{c.name}</div>
-              <div className="mt-1 text-sm text-foreground/75">{c.desc}</div>
-            </div>
-          ))}
-        </div>
-      </section>
+{/* How It Works */}
+<section className="mt-12">
+  <h2 className="font-display text-xl font-semibold text-leaf-600">
+    How Carbon Compass Works
+  </h2>
 
-      <section className="mt-12 space-y-3">
-        <h2 className="font-display text-xl font-semibold text-leaf-600">Data sources</h2>
-        <p className="text-foreground/80 leading-relaxed">
-          Our emission factors are drawn from publicly available carbon-accounting methodologies and reference datasets,
-          including the IPCC guidelines for national greenhouse gas inventories, the GHG Protocol, the UK DEFRA
-          conversion factors, the US EPA emission factors hub, and the IEA energy statistics. Values are simplified and
-          rounded for clarity, and are reviewed periodically as better references become available.
-        </p>
-      </section>
+  <p className="mt-3 text-foreground/80 leading-relaxed">
+    Carbon Compass estimates your monthly carbon footprint based on everyday
+    lifestyle choices across four areas:
+    <span className="font-medium text-leaf-600">
+      {" "}Energy, Transportation, Food, and Waste.
+    </span>
+    {" "}Your responses are matched with emission factors to generate a
+    personalized footprint, insights, and practical reduction strategies.
+  </p>
+</section>
 
-      <section className="mt-12 rounded-xl border border-leaf-200/60 bg-leaf-100/40 p-5">
-        <h2 className="font-display text-base font-semibold text-leaf-600">Disclaimer</h2>
-        <p className="mt-1 text-sm text-foreground/75">
-          Results are estimates intended to support awareness and sustainable decision-making. They are not suitable for
-          regulatory reporting, offsets accounting, or comparison between individuals.
-        </p>
-      </section>
+{/* Data Sources */}
+<section className="mt-10">
+  <h2 className="font-display text-xl font-semibold text-leaf-600">
+    Data Sources
+  </h2>
+
+  <p className="mt-3 text-foreground/80 leading-relaxed">
+    Calculations are based on internationally recognized references including
+    the IPCC, GHG Protocol, DEFRA, EPA, and IEA. Values are simplified for
+    educational and awareness purposes.
+  </p>
+</section>
+
+{/* Disclaimer */}
+<section className="mt-10 rounded-xl border border-leaf-200/60 bg-leaf-100/40 p-5">
+  <h2 className="font-display text-base font-semibold text-leaf-600">
+    Disclaimer
+  </h2>
+
+  <p className="mt-1 text-sm text-foreground/75">
+    Results are estimates designed to support awareness and sustainable
+    decision-making. They should not be used for regulatory or formal carbon
+    reporting.
+  </p>
+</section>
     </div>
   );
 }
