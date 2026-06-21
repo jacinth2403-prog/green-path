@@ -157,7 +157,12 @@ describe("impactStatus", () => {
 
 describe("deriveInsights", () => {
   it("identifies the largest contributor and existing strength", () => {
-    const a = HIGH_EMISSION_ASSESSMENT;
+    const a = makeAssessment({
+      carKm: 1000, shortFlights: 4, longFlights: 2,
+      electricityKwh: 50, acHoursPerDay: 0,
+      diet: "vegan", redMeatPerWeek: 0, whiteMeatPerWeek: 0, dairy: "none", foodWaste: "rarely",
+      trash: "small_bag", recycling: "always", clothing: "0_5", electronics: "5y", reusables: "always",
+    });
     const b = calculateBreakdown(a);
     const ins = deriveInsights(b, a);
     expect(ins.largestContributor).toMatch(/Transportation/);
