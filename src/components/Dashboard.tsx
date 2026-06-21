@@ -160,36 +160,40 @@ function Simulator({ assessment, original }:{ assessment: Assessment; original: 
   return (
     <div className="card-soft p-6 sm:p-8">
       <h3 className="font-display text-xl font-semibold text-leaf-600">🌱 Impact Simulator</h3>
+      <p className="mt-1 text-sm font-medium text-leaf-500">🌱 Explore Different Choices</p>
       <p className="mt-1 text-sm text-muted-foreground">Adjust absolute values below to simulate direct reductions against your actual calculation engine.</p>
 
       <div className="mt-6 grid gap-5 md:grid-cols-3">
-        <Slider 
-          label="Reduce Car Mileage" 
-          value={carKmDelta} 
-          max={assessment.carKm} 
-          unit="km/wk" 
-          onChange={setCarKmDelta} 
+        <Slider
+          label="Reduce Car Mileage"
+          value={carKmDelta}
+          max={assessment.carKm}
+          unit="km/wk"
+          onChange={setCarKmDelta}
         />
-        <Slider 
-          label="Reduce Electricity Consumption" 
-          value={electricityDelta} 
-          max={assessment.electricityKwh} 
-          unit="kWh/mo" 
-          onChange={setElectricityDelta} 
+        <Slider
+          label="Reduce Electricity Consumption"
+          value={electricityDelta}
+          max={assessment.electricityKwh}
+          unit="kWh/mo"
+          onChange={setElectricityDelta}
         />
-        <Slider 
-          label="Reduce Red Meat Meals" 
-          value={redMeatDelta} 
-          max={assessment.redMeatPerWeek} 
-          unit="meals/wk" 
-          onChange={setRedMeatDelta} 
+        <Slider
+          label="Reduce Red Meat Meals"
+          value={redMeatDelta}
+          max={assessment.redMeatPerWeek}
+          unit="meals/wk"
+          onChange={setRedMeatDelta}
         />
       </div>
 
       <div className="mt-6 grid gap-5 rounded-xl bg-leaf-50 p-5 md:grid-cols-3">
-        <Stat label="Current Baseline" value={`${original.total.toFixed(1)} kg`} tone="muted" />
-        <Stat label="Projected Footprint" value={`${projected.total.toFixed(1)} kg`} tone="primary" />
-        <Stat label="Net Savings Potential" value={`−${reduction.toFixed(1)} kg`} tone="accent" />
+        <Stat label="Current Footprint" value={`${original.total.toFixed(1)} kg`} tone="muted" />
+        <Stat label="Your New Footprint" value={`${projected.total.toFixed(1)} kg`} tone="primary" />
+        <Stat label="Potential Savings" value={`−${reduction.toFixed(1)} kg`} tone="accent" />
+      </div>
+      <div className="mt-3 text-center text-sm font-semibold text-leaf-600">
+        {original.total > 0 ? `${((reduction / original.total) * 100).toFixed(1)}% reduction from your current footprint` : "Adjust the sliders to see your potential reduction"}
       </div>
     </div>
   );
