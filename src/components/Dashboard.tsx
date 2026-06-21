@@ -1,9 +1,15 @@
 import { useMemo, useState, useEffect } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import type { Assessment, Breakdown } from "@/lib/carbon";
-import { calculateBreakdown, deriveInsights, buildActionPlan, impactStatus } from "@/lib/carbon";
+import { calculateBreakdown, deriveInsights, buildActionPlan, applySimulation } from "@/lib/carbon";
 
-const COLORS = ["#55A96F", "#438F59", "#97C79A", "#2D6D47"];
+// Category palette — used consistently across donut, progress, legends, simulator highlights.
+export const CATEGORY_COLORS = {
+  Energy: "#F5B841",          // Golden yellow
+  Food: "#97C79A",            // Light green
+  Transportation: "#55A96F",  // Medium green (brand)
+  Waste: "#2BA39A",           // Teal
+} as const;
 
 interface Props {
   assessment: Assessment;
@@ -12,7 +18,6 @@ interface Props {
 }
 
 export function Dashboard({ assessment, breakdown, onRetake }: Props) {
-  const status = impactStatus(breakdown.total);
   const insights = useMemo(() => deriveInsights(breakdown, assessment), [breakdown, assessment]);
   const actions = useMemo(() => buildActionPlan(breakdown, assessment), [breakdown, assessment]);
 
@@ -26,6 +31,21 @@ export function Dashboard({ assessment, breakdown, onRetake }: Props) {
   const potentialReduction = actions.reduce((s, a) => s + a.reductionKg, 0);
   const potential = Math.max(0, breakdown.total - potentialReduction);
 
+  const highImpact = actions.find((x) => x.tier === "High Impact");
+  const easyWin = actions.find((x) => x.tier === "Easy Win");
+  const topReduction = actions.reduce((m, a) => (a.reductionKg > m ? a.reductionKg : m), 0);
+
+  const storyCards = [
+    { icon: "🔍", title: "Largest Contributor", body: insights.largestContributor },
+    { icon: "🚀", title: "Biggest Opportunity",
+      body: `${insights.biggestOpportunity} Adopting your full plan could cut roughly ${potentialReduction.toFixed(0)} kg/mo.` },
+    { icon: "✅", title: "Existing Strength", body: insights.existingStrength },
+    { icon: "🌟", title: "High Impact Action",
+      body: highImpact ? `${highImpact.title} — about −${highImpact.reductionKg} kg/mo.` : "Take an assessment to surface your top lever." },
+    { icon: "⚡", title: "Easy Win",
+      body: easyWin ? `${easyWin.title} — quick to start, −${easyWin.reductionKg} kg/mo.` : "Small habits add up — start with reusables." },
+  ];
+
   return (
     <section className="space-y-8">
       {/* Hero card */}
@@ -37,10 +57,6 @@ export function Dashboard({ assessment, breakdown, onRetake }: Props) {
               <span className="font-display text-6xl font-bold text-leaf-600">{breakdown.total.toFixed(1)}</span>
               <span className="text-base text-muted-foreground">kg CO₂e / month</span>
             </div>
-            <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-leaf-100/70 px-3 py-1.5 text-sm font-medium text-leaf-600">
-              <span className={`h-2 w-2 rounded-full ${status.tone === "low" ? "bg-leaf-300" : status.tone === "moderate" ? "bg-yellow-500" : "bg-red-500"}`} />
-              {status.label}
-            </div>
             <div className="mt-4 inline-flex items-start gap-2 rounded-lg bg-leaf-100/60 px-3 py-2 text-xs text-leaf-600">
               <span>✅</span>
               <span><span className="font-semibold">Existing strength:</span> {insights.existingStrength}</span>
@@ -49,16 +65,15 @@ export function Dashboard({ assessment, breakdown, onRetake }: Props) {
               <button onClick={onRetake} className="rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium hover:bg-leaf-5">Retake assessment</button>
             </div>
           </div>
-          {/* Sizing Guard Fix: Explicit min-height & width percentage adjustment to prevent ResponsiveContainer size loops */}
           <div className="h-72 min-h-[288px] w-full max-w-[99%]">
             <ResponsiveContainer width="99%" height="100%">
               <PieChart>
                 <Pie data={pieData} dataKey="value" innerRadius={62} outerRadius={100} paddingAngle={2} stroke="none">
-                  {pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                  {pieData.map((d) => (
+                    <Cell key={d.name} fill={CATEGORY_COLORS[d.name as keyof typeof CATEGORY_COLORS]} />
+                  ))}
                 </Pie>
-                <Tooltip
-                  formatter={(v: number) => [`${v.toFixed(1)} kg CO₂e`, "Emissions"]}
-                />
+                <Tooltip formatter={(v: number) => [`${v.toFixed(1)} kg CO₂e`, "Emissions"]} />
                 <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
               </PieChart>
             </ResponsiveContainer>
@@ -66,34 +81,15 @@ export function Dashboard({ assessment, breakdown, onRetake }: Props) {
         </div>
       </div>
 
-      {/* Insights */}
+      {/* Your Carbon Story — merges Insights + Recommended Actions */}
       <div>
-        <h3 className="mb-3 font-display text-xl font-semibold text-leaf-600">Personalized Insights</h3>
-        <div className="grid gap-4 md:grid-cols-2">
-          <InsightCard icon="🔍" title="Largest Contributor" body={insights.largestContributor} />
-          <InsightCard icon="🚀" title="Biggest Opportunity" body={insights.biggestOpportunity} />
-        </div>
-      </div>
-
-      {/* Action plan */}
-      <div>
-        <h3 className="mb-2 font-display text-xl font-semibold text-leaf-600">Recommended Actions</h3>
-        <p className="mb-3 text-sm text-muted-foreground">These recommendations are tailored to the areas contributing most to your carbon footprint.</p>
+        <h3 className="mb-1 font-display text-xl font-semibold text-leaf-600">Your Carbon Story</h3>
+        <p className="mb-3 text-sm text-muted-foreground">
+          A single narrative — where your footprint comes from, what to keep, and what to change next.
+        </p>
         <div className="grid gap-4 md:grid-cols-3">
-          {actions.map((a) => (
-            <div key={a.title} className="card-soft p-5">
-              <div className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                a.tier === "High Impact" ? "bg-leaf-500 text-white"
-                  : a.tier === "Medium Impact" ? "bg-leaf-300 text-white"
-                  : "bg-leaf-100 text-leaf-600"
-              }`}>{a.tier}</div>
-              <div className="mt-3 font-display text-base font-semibold text-foreground">{a.title}</div>
-              <p className="mt-1.5 text-sm text-muted-foreground">{a.description}</p>
-              <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
-                <span className="text-xs text-muted-foreground">Potential reduction</span>
-                <span className="text-sm font-semibold text-leaf-500">−{a.reductionKg} kg/mo</span>
-              </div>
-            </div>
+          {storyCards.map((c) => (
+            <InsightCard key={c.title} icon={c.icon} title={c.title} body={c.body} />
           ))}
         </div>
       </div>
@@ -105,9 +101,13 @@ export function Dashboard({ assessment, breakdown, onRetake }: Props) {
           <Stat label="If you adopt the plan" value={`${potential.toFixed(1)} kg`} tone="primary" />
           <Stat label="Potential reduction" value={`−${potentialReduction.toFixed(1)} kg`} tone="accent" />
         </div>
+        {topReduction > 0 && (
+          <p className="mt-3 text-xs text-muted-foreground">
+            Your top single action alone could remove about {topReduction} kg/mo.
+          </p>
+        )}
       </div>
 
-      {/* Simulator */}
       <Simulator assessment={assessment} original={breakdown} />
     </section>
   );
@@ -135,89 +135,128 @@ function Stat({ label, value, tone }:{ label: string; value: string; tone: "mute
   );
 }
 
+interface SimState {
+  carKm: number;
+  electricity: number;
+  redMeat: number;
+  acHours: number;
+  bus: number;
+  foodWasteSteps: number;     // negative = better
+  shortFlights: number;
+  recyclingSteps: number;     // positive = better
+}
+
+const initSim: SimState = {
+  carKm: 0, electricity: 0, redMeat: 0, acHours: 0, bus: 0,
+  foodWasteSteps: 0, shortFlights: 0, recyclingSteps: 0,
+};
+
 function Simulator({ assessment, original }:{ assessment: Assessment; original: Breakdown }) {
-  const [carKmDelta, setCarKmDelta] = useState(0);
-  const [electricityDelta, setElectricityDelta] = useState(0);
-  const [redMeatDelta, setRedMeatDelta] = useState(0);
+  const [s, setS] = useState<SimState>(initSim);
 
-  // Auto-Reset Fix: Wipes state cleans values instantly if baseline model values swap
-  useEffect(() => {
-    setCarKmDelta(0);
-    setElectricityDelta(0);
-    setRedMeatDelta(0);
-  }, [assessment.id, assessment.carKm, assessment.electricityKwh, assessment.redMeatPerWeek]);
+  useEffect(() => { setS(initSim); }, [assessment.id]);
 
-  const simulatedAssessment: Assessment = {
-    ...assessment,
-    carKm: Math.max(0, assessment.carKm - carKmDelta),
-    electricityKwh: Math.max(0, assessment.electricityKwh - electricityDelta),
-    redMeatPerWeek: Math.max(0, assessment.redMeatPerWeek - redMeatDelta),
-  };
+  const set = <K extends keyof SimState>(k: K, v: number) => setS((prev) => ({ ...prev, [k]: v }));
 
-  const projected = calculateBreakdown(simulatedAssessment);
+  const projected = useMemo(
+    () =>
+      calculateBreakdown(
+        applySimulation(assessment, {
+          carKmAdjustment: -s.carKm,
+          electricityKwhAdjustment: -s.electricity,
+          redMeatMealsAdjustment: -s.redMeat,
+          acHoursAdjustment: -s.acHours,
+          busKmAdjustment: s.bus,
+          foodWasteSteps: -s.foodWasteSteps,
+          shortFlightsAdjustment: -s.shortFlights,
+          recyclingSteps: s.recyclingSteps,
+        }),
+      ),
+    [assessment, s],
+  );
   const reduction = Math.max(0, original.total - projected.total);
 
   return (
     <div className="card-soft p-6 sm:p-8">
       <h3 className="font-display text-xl font-semibold text-leaf-600">🌱 Impact Simulator</h3>
-      <p className="mt-1 text-sm font-medium text-leaf-500">🌱 Explore Different Choices</p>
-      <p className="mt-1 text-sm text-muted-foreground">Adjust absolute values below to simulate direct reductions against your actual calculation engine.</p>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Adjust the levers below — projections update live against your real calculation engine.
+      </p>
 
-      <div className="mt-6 grid gap-5 md:grid-cols-3">
-        <Slider
-          label="Reduce Car Mileage"
-          value={carKmDelta}
-          max={assessment.carKm}
-          unit="km/wk"
-          onChange={setCarKmDelta}
-        />
-        <Slider
-          label="Reduce Electricity Consumption"
-          value={electricityDelta}
-          max={assessment.electricityKwh}
-          unit="kWh/mo"
-          onChange={setElectricityDelta}
-        />
-        <Slider
-          label="Reduce Red Meat Meals"
-          value={redMeatDelta}
-          max={assessment.redMeatPerWeek}
-          unit="meals/wk"
-          onChange={setRedMeatDelta}
-        />
+      <div className="mt-6 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+        <Slider label="Reduce car mileage" category="Transportation"
+          value={s.carKm} max={assessment.carKm} unit="km/wk"
+          onChange={(v) => set("carKm", v)} />
+        <Slider label="Shift trips to public transit" category="Transportation"
+          value={s.bus} max={Math.max(20, assessment.carKm)} unit="km/wk added"
+          onChange={(v) => set("bus", v)} />
+        <Slider label="Reduce short flights" category="Transportation"
+          value={s.shortFlights} max={assessment.shortFlights} unit="flights/yr"
+          onChange={(v) => set("shortFlights", v)} />
+
+        <Slider label="Reduce electricity" category="Energy"
+          value={s.electricity} max={assessment.electricityKwh} unit="kWh/mo"
+          onChange={(v) => set("electricity", v)} />
+        <Slider label="Reduce AC usage" category="Energy"
+          value={s.acHours} max={assessment.acHoursPerDay} unit="hrs/day"
+          onChange={(v) => set("acHours", v)} />
+
+        <Slider label="Reduce red-meat meals" category="Food"
+          value={s.redMeat} max={assessment.redMeatPerWeek} unit="meals/wk"
+          onChange={(v) => set("redMeat", v)} />
+        <Slider label="Reduce food waste" category="Food"
+          value={s.foodWasteSteps} max={3} unit="steps better"
+          onChange={(v) => set("foodWasteSteps", v)} />
+
+        <Slider label="Recycle more often" category="Waste"
+          value={s.recyclingSteps} max={3} unit="steps better"
+          onChange={(v) => set("recyclingSteps", v)} />
       </div>
 
       <div className="mt-6 grid gap-5 rounded-xl bg-leaf-50 p-5 md:grid-cols-3">
-        <Stat label="Current Footprint" value={`${original.total.toFixed(1)} kg`} tone="muted" />
-        <Stat label="Your New Footprint" value={`${projected.total.toFixed(1)} kg`} tone="primary" />
-        <Stat label="Potential Savings" value={`−${reduction.toFixed(1)} kg`} tone="accent" />
+        <Stat label="Current footprint" value={`${original.total.toFixed(1)} kg`} tone="muted" />
+        <Stat label="Your new footprint" value={`${projected.total.toFixed(1)} kg`} tone="primary" />
+        <Stat label="Potential savings" value={`−${reduction.toFixed(1)} kg`} tone="accent" />
       </div>
       <div className="mt-3 text-center text-sm font-semibold text-leaf-600">
-        {original.total > 0 ? `${((reduction / original.total) * 100).toFixed(1)}% reduction from your current footprint` : "Adjust the sliders to see your potential reduction"}
+        {original.total > 0
+          ? `${((reduction / original.total) * 100).toFixed(1)}% reduction from your current footprint`
+          : "Adjust the sliders to see your potential reduction"}
       </div>
     </div>
   );
 }
 
-function Slider({ label, value, max, unit, onChange }:{ label: string; value: number; max: number; unit: string; onChange: (n: number) => void }) {
+function Slider({
+  label, value, max, unit, onChange, category,
+}:{
+  label: string; value: number; max: number; unit: string;
+  onChange: (n: number) => void;
+  category: keyof typeof CATEGORY_COLORS;
+}) {
   const isZeroBaseline = max <= 0;
+  const color = CATEGORY_COLORS[category];
 
   return (
     <div className={isZeroBaseline ? "opacity-40 pointer-events-none" : ""}>
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium">{label}</span>
-        <span className="text-sm font-semibold text-leaf-500">
-          {isZeroBaseline ? "0" : `-${value}`} {unit}
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <span className="inline-block h-2 w-2 rounded-full" style={{ background: color }} />
+          {label}
+        </div>
+        <span className="text-sm font-semibold" style={{ color }}>
+          {isZeroBaseline ? "0" : value} {unit}
         </span>
       </div>
       <input
-        type="range" 
-        min={0} 
-        max={isZeroBaseline ? 100 : Math.ceil(max)} 
+        type="range"
+        min={0}
+        max={isZeroBaseline ? 100 : Math.ceil(max)}
         value={value}
         disabled={isZeroBaseline}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="mt-2 w-full accent-leaf-300"
+        className="mt-2 w-full"
+        style={{ accentColor: color }}
       />
     </div>
   );
