@@ -133,29 +133,6 @@ function ProgressPage() {
             </div>
           </div>
 
-          {/* placeholder so we can replace the original duplicated block below */}
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          <div className="card-soft p-6">
-            <h2 className="font-display text-lg font-semibold text-leaf-600">Category trends</h2>
-            <div className="mt-4 h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5ecdf" />
-                  <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="Energy" stackId="a" fill="#438F59" />
-                  <Bar dataKey="Transportation" stackId="a" fill="#55A96F" />
-                  <Bar dataKey="Food" stackId="a" fill="#97C79A" />
-                  <Bar dataKey="Waste" stackId="a" fill="#B7D3B8" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
 
           <div className="card-soft overflow-hidden">
             <h2 className="px-6 pt-6 font-display text-lg font-semibold text-leaf-600">Assessment history</h2>
