@@ -94,7 +94,13 @@ export function calculateBreakdown(a: Assessment): Breakdown {
   const redMeatPerWeek = sanitize(a.redMeatPerWeek);
   const whiteMeatPerWeek = sanitize(a.whiteMeatPerWeek);
 
-  const electricity = electricityKwh * 0.73; 
+  // Household-size sharing efficiency: larger households share baseline loads,
+  // so per-household electricity & water emissions scale slightly less than linearly.
+  // Mild factor (1 person: 1.0, 2: 0.95, 3: 0.90, 4: 0.85, capped at 0.80).
+  const hh = Math.max(1, sanitize(a.householdSize) || 1);
+  const sharing = 1 - Math.min(0.2, (hh - 1) * 0.05);
+
+  const electricity = electricityKwh * 0.73 * sharing;
 
   const cookingMap: Record<CookingFuel, number> = {
     lpg_lt1: 15, lpg_1: 30, lpg_2: 60, lpg_3plus: 90, electric: 20, piped_gas: 40,
@@ -104,7 +110,7 @@ export function calculateBreakdown(a: Assessment): Breakdown {
   const waterMap: Record<WaterTier, number> = {
     lt5k: 2, "5to10k": 5, "10to20k": 10, gt20k: 15,
   };
-  const water = waterMap[a.waterTier] ?? 5;
+  const water = (waterMap[a.waterTier] ?? 5) * sharing;
   const energy = electricity + cooking + water;
 
   const carFactor = a.fuelType === "diesel" ? 0.17
