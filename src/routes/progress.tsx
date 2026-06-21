@@ -54,6 +54,51 @@ function ProgressPage() {
         </div>
       ) : (
         <div className="mt-8 space-y-6">
+          {history.length > 1 && (() => {
+  const first = history[0].breakdown.total;
+  const latest = history[history.length - 1].breakdown.total;
+
+  const improvement =
+    first > 0
+      ? (((first - latest) / first) * 100).toFixed(1)
+      : "0";
+
+  const best = Math.min(
+    ...history.map((h) => h.breakdown.total)
+  );
+
+  return (
+    <div className="grid gap-4 md:grid-cols-3">
+      <div className="card-soft p-5">
+        <div className="text-xs uppercase text-muted-foreground">
+          Current Footprint
+        </div>
+        <div className="mt-2 text-3xl font-bold text-leaf-600">
+          {latest.toFixed(1)} kg
+        </div>
+      </div>
+
+      <div className="card-soft p-5">
+        <div className="text-xs uppercase text-muted-foreground">
+          Best Footprint
+        </div>
+        <div className="mt-2 text-3xl font-bold text-leaf-500">
+          {best.toFixed(1)} kg
+        </div>
+      </div>
+
+      <div className="card-soft p-5">
+        <div className="text-xs uppercase text-muted-foreground">
+          Improvement
+        </div>
+        <div className="mt-2 text-3xl font-bold text-leaf-600">
+          {Number(improvement) >= 0 ? "↓" : "↑"}{" "}
+          {Math.abs(Number(improvement)).toFixed(1)}%
+        </div>
+      </div>
+    </div>
+  );
+})()}
           <div className="card-soft p-6">
             <h2 className="font-display text-lg font-semibold text-leaf-600">Total footprint trend</h2>
             <div className="mt-4 h-72">
