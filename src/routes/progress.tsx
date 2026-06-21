@@ -34,7 +34,7 @@ function ProgressPage() {
     <div className="mx-auto max-w-6xl px-5 py-12">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-3xl font-semibold text-leaf-600">Your progress</h1>
+          <h1 className="font-display text-3xl font-semibold text-leaf-600">Your Carbon Journey</h1>
           <p className="mt-1 text-sm text-muted-foreground">Every assessment lives here so you can see your direction over time.</p>
         </div>
         {history.length > 0 && (
@@ -47,9 +47,9 @@ function ProgressPage() {
 
       {history.length === 0 ? (
         <div className="card-soft mt-8 p-12 text-center">
-          <div className="text-5xl">🌱</div>
+          <CompassIcon className="mx-auto h-14 w-14 text-leaf-500" />
           <h2 className="mt-4 font-display text-xl font-semibold text-leaf-600">No assessments yet</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Take your first assessment to start tracking.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Take your first assessment to set your bearings.</p>
           <Link to="/" className="mt-5 inline-block rounded-lg bg-leaf-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-leaf-600">Start assessment</Link>
         </div>
       ) : (
