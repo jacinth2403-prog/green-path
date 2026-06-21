@@ -168,3 +168,26 @@ function ProgressPage() {
     </div>
   );
 }
+
+function CompassIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="9" />
+      <polygon points="14.5 9.5 9.5 11.5 9.5 14.5 14.5 12.5 14.5 9.5" fill="currentColor" stroke="none" opacity="0.85" />
+      <line x1="12" y1="3" x2="12" y2="5" />
+      <line x1="12" y1="19" x2="12" y2="21" />
+      <line x1="3" y1="12" x2="5" y2="12" />
+      <line x1="19" y1="12" x2="21" y2="12" />
+    </svg>
+  );
+}
