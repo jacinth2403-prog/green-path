@@ -150,7 +150,7 @@ export function calculateBreakdown(a: Assessment): Breakdown {
     details: {
       electricity: round(electricity), cooking: round(cooking), water: round(water),
       car: round(car), motorcycle: round(motorcycle), bus: round(bus), metro: round(metro), flights: round(flights),
-      diet: round(diet), trash: round(trash), clothing: round(clothing), electronics: round(electronics),
+      diet: round(diet), trash: round(trash), clothing: round(clothingMap[a.clothing] ?? 5), electronics: round(electronicsMap[a.electronics] ?? 5),
     },
   };
 }

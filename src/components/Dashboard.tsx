@@ -41,6 +41,10 @@ export function Dashboard({ assessment, breakdown, onRetake }: Props) {
               <span className={`h-2 w-2 rounded-full ${status.tone === "low" ? "bg-leaf-300" : status.tone === "moderate" ? "bg-yellow-500" : "bg-red-500"}`} />
               {status.label}
             </div>
+            <div className="mt-4 inline-flex items-start gap-2 rounded-lg bg-leaf-100/60 px-3 py-2 text-xs text-leaf-600">
+              <span>✅</span>
+              <span><span className="font-semibold">Existing strength:</span> {insights.existingStrength}</span>
+            </div>
             <div className="mt-5 flex flex-wrap gap-2">
               <button onClick={onRetake} className="rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium hover:bg-leaf-5">Retake assessment</button>
             </div>
@@ -64,17 +68,17 @@ export function Dashboard({ assessment, breakdown, onRetake }: Props) {
 
       {/* Insights */}
       <div>
-        <h3 className="mb-3 font-display text-xl font-semibold text-leaf-600">Key insights</h3>
-        <div className="grid gap-4 md:grid-cols-3">
-          <InsightCard icon="🔍" title="Largest contributor" body={insights.largestContributor} />
-          <InsightCard icon="🚀" title="Biggest opportunity" body={insights.biggestOpportunity} />
-          <InsightCard icon="✅" title="Existing strength" body={insights.existingStrength} />
+        <h3 className="mb-3 font-display text-xl font-semibold text-leaf-600">Personalized Insights</h3>
+        <div className="grid gap-4 md:grid-cols-2">
+          <InsightCard icon="🔍" title="Largest Contributor" body={insights.largestContributor} />
+          <InsightCard icon="🚀" title="Biggest Opportunity" body={insights.biggestOpportunity} />
         </div>
       </div>
 
       {/* Action plan */}
       <div>
-        <h3 className="mb-3 font-display text-xl font-semibold text-leaf-600">Personalized action plan</h3>
+        <h3 className="mb-2 font-display text-xl font-semibold text-leaf-600">Recommended Actions</h3>
+        <p className="mb-3 text-sm text-muted-foreground">These recommendations are tailored to the areas contributing most to your carbon footprint.</p>
         <div className="grid gap-4 md:grid-cols-3">
           {actions.map((a) => (
             <div key={a.title} className="card-soft p-5">
@@ -156,36 +160,40 @@ function Simulator({ assessment, original }:{ assessment: Assessment; original: 
   return (
     <div className="card-soft p-6 sm:p-8">
       <h3 className="font-display text-xl font-semibold text-leaf-600">🌱 Impact Simulator</h3>
+      <p className="mt-1 text-sm font-medium text-leaf-500">🌱 Explore Different Choices</p>
       <p className="mt-1 text-sm text-muted-foreground">Adjust absolute values below to simulate direct reductions against your actual calculation engine.</p>
 
       <div className="mt-6 grid gap-5 md:grid-cols-3">
-        <Slider 
-          label="Reduce Car Mileage" 
-          value={carKmDelta} 
-          max={assessment.carKm} 
-          unit="km/wk" 
-          onChange={setCarKmDelta} 
+        <Slider
+          label="Reduce Car Mileage"
+          value={carKmDelta}
+          max={assessment.carKm}
+          unit="km/wk"
+          onChange={setCarKmDelta}
         />
-        <Slider 
-          label="Reduce Electricity Consumption" 
-          value={electricityDelta} 
-          max={assessment.electricityKwh} 
-          unit="kWh/mo" 
-          onChange={setElectricityDelta} 
+        <Slider
+          label="Reduce Electricity Consumption"
+          value={electricityDelta}
+          max={assessment.electricityKwh}
+          unit="kWh/mo"
+          onChange={setElectricityDelta}
         />
-        <Slider 
-          label="Reduce Red Meat Meals" 
-          value={redMeatDelta} 
-          max={assessment.redMeatPerWeek} 
-          unit="meals/wk" 
-          onChange={setRedMeatDelta} 
+        <Slider
+          label="Reduce Red Meat Meals"
+          value={redMeatDelta}
+          max={assessment.redMeatPerWeek}
+          unit="meals/wk"
+          onChange={setRedMeatDelta}
         />
       </div>
 
       <div className="mt-6 grid gap-5 rounded-xl bg-leaf-50 p-5 md:grid-cols-3">
-        <Stat label="Current Baseline" value={`${original.total.toFixed(1)} kg`} tone="muted" />
-        <Stat label="Projected Footprint" value={`${projected.total.toFixed(1)} kg`} tone="primary" />
-        <Stat label="Net Savings Potential" value={`−${reduction.toFixed(1)} kg`} tone="accent" />
+        <Stat label="Current Footprint" value={`${original.total.toFixed(1)} kg`} tone="muted" />
+        <Stat label="Your New Footprint" value={`${projected.total.toFixed(1)} kg`} tone="primary" />
+        <Stat label="Potential Savings" value={`−${reduction.toFixed(1)} kg`} tone="accent" />
+      </div>
+      <div className="mt-3 text-center text-sm font-semibold text-leaf-600">
+        {original.total > 0 ? `${((reduction / original.total) * 100).toFixed(1)}% reduction from your current footprint` : "Adjust the sliders to see your potential reduction"}
       </div>
     </div>
   );
