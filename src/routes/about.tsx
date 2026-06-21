@@ -47,79 +47,46 @@ function AboutPage() {
       <section className="mt-12">
         <h2 className="font-display text-xl font-semibold text-leaf-600">How it works</h2>
         <ol className="mt-4 space-y-2">
-          {<section className="mt-12">
-  <h2 className="font-display text-xl font-semibold text-leaf-600">
-    Simple Process
-  </h2>
-
-  <div className="mt-4 grid gap-4 md:grid-cols-3">
-    <div className="rounded-xl border border-border bg-card p-4">
-      <div className="font-medium text-leaf-600">1. Assess</div>
-      <div className="mt-1 text-sm text-foreground/75">
-        Answer a short lifestyle questionnaire.
-      </div>
-    </div>
-
-    <div className="rounded-xl border border-border bg-card p-4">
-      <div className="font-medium text-leaf-600">2. Understand</div>
-      <div className="mt-1 text-sm text-foreground/75">
-        Explore personalized insights and recommendations.
-      </div>
-    </div>
-
-    <div className="rounded-xl border border-border bg-card p-4">
-      <div className="font-medium text-leaf-600">3. Improve</div>
-      <div className="mt-1 text-sm text-foreground/75">
-        Track progress and reduce your footprint over time.
-      </div>
-    </div>
-  </div>
-</section>
+          {FLOW.map((step, i) => (
+            <li key={step.title} className="rounded-xl border border-border bg-card p-4">
+              <div className="font-medium text-leaf-600">{i + 1}. {step.title}</div>
+              <div className="mt-1 text-sm text-foreground/75">{step.desc}</div>
+            </li>
+          ))}
         </ol>
       </section>
 
-{/* How It Works */}
-<section className="mt-12">
-  <h2 className="font-display text-xl font-semibold text-leaf-600">
-    How Carbon Compass Works
-  </h2>
+      <section className="mt-12">
+        <h2 className="font-display text-xl font-semibold text-leaf-600">Methodology</h2>
+        <p className="mt-3 text-foreground/80 leading-relaxed">
+          Emissions are estimated using activity-based calculations multiplied by published emission factors,
+          across four categories:
+        </p>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          {CATEGORIES.map((c) => (
+            <div key={c.name} className="rounded-xl border border-border bg-card p-4">
+              <div className="font-medium text-leaf-600">{c.name}</div>
+              <div className="mt-1 text-sm text-foreground/75">{c.desc}</div>
+            </div>
+          ))}
+        </div>
+      </section>
 
-  <p className="mt-3 text-foreground/80 leading-relaxed">
-    Carbon Compass estimates your monthly carbon footprint based on everyday
-    lifestyle choices across four areas:
-    <span className="font-medium text-leaf-600">
-      {" "}Energy, Transportation, Food, and Waste.
-    </span>
-    {" "}Your responses are matched with emission factors to generate a
-    personalized footprint, insights, and practical reduction strategies.
-  </p>
-</section>
+      <section className="mt-10">
+        <h2 className="font-display text-xl font-semibold text-leaf-600">Data Sources</h2>
+        <p className="mt-3 text-foreground/80 leading-relaxed">
+          Calculations draw on publicly available carbon accounting methodologies and emission factor references,
+          including the IPCC, GHG Protocol, DEFRA, EPA, and IEA. Values are simplified for educational and awareness
+          purposes.
+        </p>
+      </section>
 
-{/* Data Sources */}
-<section className="mt-10">
-  <h2 className="font-display text-xl font-semibold text-leaf-600">
-    Data Sources
-  </h2>
-
-  <p className="mt-3 text-foreground/80 leading-relaxed">
-    Calculations are based on internationally recognized references including
-    the IPCC, GHG Protocol, DEFRA, EPA, and IEA. Values are simplified for
-    educational and awareness purposes.
-  </p>
-</section>
-
-{/* Disclaimer */}
-<section className="mt-10 rounded-xl border border-leaf-200/60 bg-leaf-100/40 p-5">
-  <h2 className="font-display text-base font-semibold text-leaf-600">
-    Disclaimer
-  </h2>
-
-  <p className="mt-1 text-sm text-foreground/75">
-    Results are estimates designed to support awareness and sustainable
-    decision-making. They should not be used for regulatory or formal carbon
-    reporting.
-  </p>
-</section>
+      <section className="mt-10 rounded-xl border border-leaf-200/60 bg-leaf-100/40 p-5">
+        <h2 className="font-display text-base font-semibold text-leaf-600">Disclaimer</h2>
+        <p className="mt-1 text-sm text-foreground/75">
+          Results are estimates intended to support awareness and sustainable decision-making.
+        </p>
+      </section>
     </div>
   );
 }
