@@ -42,7 +42,6 @@ export function saveEntry(entry: StoredEntry) {
     JSON.stringify(updatedHistory)
   );
 }
-}
 
 export function clearHistory() {
   if (typeof window === "undefined") return;
