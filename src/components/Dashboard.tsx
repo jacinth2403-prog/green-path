@@ -41,6 +41,10 @@ export function Dashboard({ assessment, breakdown, onRetake }: Props) {
               <span className={`h-2 w-2 rounded-full ${status.tone === "low" ? "bg-leaf-300" : status.tone === "moderate" ? "bg-yellow-500" : "bg-red-500"}`} />
               {status.label}
             </div>
+            <div className="mt-4 inline-flex items-start gap-2 rounded-lg bg-leaf-100/60 px-3 py-2 text-xs text-leaf-600">
+              <span>✅</span>
+              <span><span className="font-semibold">Existing strength:</span> {insights.existingStrength}</span>
+            </div>
             <div className="mt-5 flex flex-wrap gap-2">
               <button onClick={onRetake} className="rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium hover:bg-leaf-5">Retake assessment</button>
             </div>
