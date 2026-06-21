@@ -94,7 +94,13 @@ export function calculateBreakdown(a: Assessment): Breakdown {
   const redMeatPerWeek = sanitize(a.redMeatPerWeek);
   const whiteMeatPerWeek = sanitize(a.whiteMeatPerWeek);
 
-  const electricity = electricityKwh * 0.73; 
+  // Household-size sharing efficiency: larger households share baseline loads,
+  // so per-household electricity & water emissions scale slightly less than linearly.
+  // Mild factor (1 person: 1.0, 2: 0.95, 3: 0.90, 4: 0.85, capped at 0.80).
+  const hh = Math.max(1, sanitize(a.householdSize) || 1);
+  const sharing = 1 - Math.min(0.2, (hh - 1) * 0.05);
+
+  const electricity = electricityKwh * 0.73 * sharing;
 
   const cookingMap: Record<CookingFuel, number> = {
     lpg_lt1: 15, lpg_1: 30, lpg_2: 60, lpg_3plus: 90, electric: 20, piped_gas: 40,
@@ -104,7 +110,7 @@ export function calculateBreakdown(a: Assessment): Breakdown {
   const waterMap: Record<WaterTier, number> = {
     lt5k: 2, "5to10k": 5, "10to20k": 10, gt20k: 15,
   };
-  const water = waterMap[a.waterTier] ?? 5;
+  const water = (waterMap[a.waterTier] ?? 5) * sharing;
   const energy = electricity + cooking + water;
 
   const carFactor = a.fuelType === "diesel" ? 0.17
@@ -162,61 +168,113 @@ export interface Action {
   reductionKg: number;
 }
 
+// Recommendations now adapt to: largest emission category, user-selected
+// improvement area (improveArea), and willingness level (small/moderate/major).
 export function buildActionPlan(b: Breakdown, a: Assessment): Action[] {
   const actions: Action[] = [];
 
-  // FIX 2 & 3: High Impact recommendations now check underlying user habits dynamically
-  if (b.transportation >= b.energy && b.transportation >= b.food) {
-    if (b.details.flights > (b.details.car + b.details.motorcycle)) {
+  // Willingness scaling — small/moderate/major translate to action magnitude.
+  const willScale: Record<Willingness, number> = { small: 0.10, moderate: 0.20, major: 0.35 };
+  const w = willScale[a.willingness] ?? 0.20;
+  const willLabel = a.willingness === "small" ? "small change"
+    : a.willingness === "major" ? "major change" : "moderate change";
+
+  // Determine the "focus" category: prefer the user's selected improvement area
+  // when it has meaningful emissions, otherwise fall back to the largest.
+  const cats: { key: ImproveArea; v: number; name: string }[] = [
+    { key: "transportation", v: b.transportation, name: "Transportation" },
+    { key: "energy", v: b.energy, name: "Energy" },
+    { key: "food", v: b.food, name: "Food" },
+    { key: "waste", v: b.waste, name: "Waste" },
+  ];
+  const sorted = [...cats].sort((x, y) => y.v - x.v);
+  const largest = sorted[0];
+  const userPick = cats.find((c) => c.key === a.improveArea);
+  const focus = userPick && userPick.v > 0 ? userPick : largest;
+
+  // ---- High Impact, tuned to focus area + willingness ----
+  if (focus.key === "transportation") {
+    if (b.details.flights > b.details.car && a.shortFlights + a.longFlights > 0) {
       actions.push({
         tier: "High Impact",
-        title: "Consolidate or reduce long-distance flights",
-        description: "Air travel is currently your largest transportation driver.",
-        reductionKg: Math.round(b.details.flights * 0.15),
+        title: a.willingness === "major"
+          ? "Cut half of your flights this year"
+          : "Consolidate or skip one flight this year",
+        description: `Air travel is your largest transport driver. A ${willLabel} here compounds quickly.`,
+        reductionKg: Math.round(b.details.flights * (w + 0.05)),
+      });
+    } else if (a.willingness === "small") {
+      actions.push({
+        tier: "High Impact",
+        title: "Carpool or work-from-home one day a week",
+        description: "A small, repeatable swap that trims roughly 20% of weekly car emissions.",
+        reductionKg: Math.round(b.details.car * 0.20),
+      });
+    } else if (a.willingness === "moderate") {
+      actions.push({
+        tier: "High Impact",
+        title: "Replace 30% of car trips with public transit or cycling",
+        description: "Buses and metros emit far less per kilometer than private cars.",
+        reductionKg: Math.round(b.details.car * 0.30),
       });
     } else {
       actions.push({
         tier: "High Impact",
-        title: "Shift 30% of car trips to public transit or cycling",
-        description: "Buses and trains emit up to 80% less carbon per kilometer than traditional cars.",
-        reductionKg: Math.round(b.details.car * 0.25),
+        title: "Replace 60% of car trips with public transit, cycling, or EV",
+        description: "A major shift in how you commute is the single biggest lever in your footprint.",
+        reductionKg: Math.round(b.details.car * 0.55),
       });
     }
-  } else if (b.energy >= b.food) {
+  } else if (focus.key === "energy") {
     if (a.acHoursPerDay >= 4) {
       actions.push({
         tier: "High Impact",
-        title: "Set AC to 26°C and reduce usage by 2 hours daily",
-        description: "Optimizing your climate control reduces heavy luxury electrical draws.",
-        reductionKg: Math.round(b.energy * 0.18),
+        title: a.willingness === "major"
+          ? "Set AC to 26°C and cut usage by 4 hours daily"
+          : "Set AC to 26°C and cut usage by 2 hours daily",
+        description: "Climate control dominates your electricity. Tuning it back is the highest-leverage habit.",
+        reductionKg: Math.round(b.energy * (a.willingness === "major" ? 0.28 : 0.18)),
       });
     } else {
       actions.push({
         tier: "High Impact",
-        title: "Transition home lighting to LEDs and manage vampire draws",
-        description: "Your baseline electricity is high. Smart strips and LED changeouts lower static load.",
-        reductionKg: Math.round(b.details.electricity * 0.15),
+        title: a.willingness === "major"
+          ? "Switch to LEDs, smart strips, and a renewable tariff"
+          : "Switch to LEDs and smart power strips",
+        description: "Tackles standing electrical load directly across the home.",
+        reductionKg: Math.round(b.details.electricity * (a.willingness === "major" ? 0.25 : 0.15)),
+      });
+    }
+  } else if (focus.key === "food") {
+    if (a.redMeatPerWeek > 0) {
+      const mealsToCut = a.willingness === "small" ? 1 : a.willingness === "moderate" ? 3 : Math.max(3, a.redMeatPerWeek);
+      actions.push({
+        tier: "High Impact",
+        title: `Swap ${mealsToCut} red-meat meal${mealsToCut > 1 ? "s" : ""} per week for plant-based`,
+        description: "Red meat carries the heaviest supply-chain footprint per serving.",
+        reductionKg: Math.round(mealsToCut * 12),
+      });
+    } else {
+      actions.push({
+        tier: "High Impact",
+        title: "Choose regional, seasonal produce",
+        description: "You're already low on meat — cutting shipping overhead is the next biggest lever.",
+        reductionKg: Math.round(b.food * (w + 0.02)),
       });
     }
   } else {
-    if (a.redMeatPerWeek > 0) {
-      actions.push({
-        tier: "High Impact",
-        title: "Swap 3 red-meat meals per week for plant-based alternatives",
-        description: "Red meat produces significantly higher supply-chain carbon loads than other items.",
-        reductionKg: Math.round(a.redMeatPerWeek * 12),
-      });
-    } else {
-      actions.push({
-        tier: "High Impact",
-        title: "Optimize your pantry by choosing regional, seasonal produce",
-        description: "You're already low on meat impact! Transitioning to seasonal items cuts shipping overhead.",
-        reductionKg: Math.round(b.food * 0.1),
-      });
-    }
+    // waste
+    actions.push({
+      tier: "High Impact",
+      title: a.willingness === "major"
+        ? "Compost organics and cut single-use packaging"
+        : "Sort recyclables consistently and reduce packaged goods",
+      description: "Most household waste emissions come from organics and packaging — both are addressable at home.",
+      reductionKg: Math.round(b.waste * (a.willingness === "major" ? 0.40 : a.willingness === "moderate" ? 0.25 : 0.15)),
+    });
   }
 
-  // Medium Impact
+  // ---- Medium Impact, biased away from the focus so it broadens the plan ----
   actions.push({
     tier: "Medium Impact",
     title: "Recycle consistently each week",
@@ -224,33 +282,33 @@ export function buildActionPlan(b: Breakdown, a: Assessment): Action[] {
     reductionKg: Math.max(3, Math.round(b.waste * 0.15)),
   });
 
-  // FIX 4: Easy Win dynamically adapts to find weak points, avoiding generic fallbacks
+  // ---- Easy Win, dynamic ----
   if (a.foodWaste === "always" || a.foodWaste === "often") {
     actions.push({
       tier: "Easy Win",
       title: "Plan meals to curb leftover food waste",
-      description: "Trimming down what gets thrown out targets a high-potency methane source in landfills.",
+      description: "Trimming what gets thrown out targets a high-potency methane source in landfills.",
       reductionKg: 8,
     });
   } else if (a.reusables === "rarely" || a.reusables === "sometimes") {
     actions.push({
       tier: "Easy Win",
       title: "Switch to dedicated reusable alternatives",
-      description: "Bringing your own bags and bottles systematically eliminates packaging waste.",
+      description: "Bringing your own bags and bottles eliminates packaging waste.",
       reductionKg: 4,
     });
   } else if (a.acHoursPerDay > 0 && a.acHoursPerDay < 4) {
     actions.push({
       tier: "Easy Win",
-      title: "Turn off your AC just 30 minutes earlier",
-      description: "A minor modification to daily habits that saves a noticeable chunk of monthly energy.",
+      title: "Turn off your AC 30 minutes earlier",
+      description: "A small habit shift that saves a noticeable chunk of monthly energy.",
       reductionKg: 3,
     });
   } else {
     actions.push({
       tier: "Easy Win",
-      title: "Unplug standby electronics when completely idle",
-      description: "Eliminating background 'phantom' electricity draws is an effortless baseline win.",
+      title: "Unplug standby electronics when idle",
+      description: "Eliminating phantom draws is an effortless baseline win.",
       reductionKg: 2,
     });
   }
@@ -279,35 +337,56 @@ export function deriveInsights(b: Breakdown, a: Assessment) {
 
   return {
     largestContributor: `${largest.name} accounts for ~${pct}% of your household footprint.`,
-    biggestOpportunity: "Review your customized action plan below to target this specific area.",
+    biggestOpportunity: `Focusing on ${largest.name.toLowerCase()} offers the largest near-term reduction.`,
     existingStrength: `${smallest.name} is your lowest emission category — excellent work.`,
   };
 }
 
-// --- MISSING FEATURE: IMPACT SIMULATOR ---
-// Allows front-end sliders to feed adjustments directly against the core engine formulas.
+// --- IMPACT SIMULATOR ---
 export interface SimulationModifiers {
-  carKmAdjustment?: number;        // e.g., -30 to simulate driving 30 fewer km/week
-  electricityKwhAdjustment?: number; // e.g., -50 to simulate saving 50 kWh
-  redMeatMealsAdjustment?: number;   // e.g., -2 to simulate dropping 2 meat meals/week
+  carKmAdjustment?: number;
+  electricityKwhAdjustment?: number;
+  redMeatMealsAdjustment?: number;
+  acHoursAdjustment?: number;
+  busKmAdjustment?: number;        // positive = more public transit (replaces car)
+  metroKmAdjustment?: number;
+  foodWasteSteps?: number;         // negative steps move toward "rarely"
+  shortFlightsAdjustment?: number;
+  recyclingSteps?: number;         // positive steps move toward "always"
+}
+
+const wasteOrder: WasteFreq[] = ["rarely", "sometimes", "often", "always"];
+const recyclingOrder: Recycling[] = ["never", "sometimes", "often", "always"];
+
+function shiftEnum<T>(order: T[], current: T, steps: number): T {
+  const i = order.indexOf(current);
+  if (i < 0) return current;
+  const next = Math.max(0, Math.min(order.length - 1, i + steps));
+  return order[next];
+}
+
+export function applySimulation(base: Assessment, mods: SimulationModifiers): Assessment {
+  return {
+    ...base,
+    carKm: Math.max(0, base.carKm + (mods.carKmAdjustment ?? 0)),
+    busKm: Math.max(0, base.busKm + (mods.busKmAdjustment ?? 0)),
+    metroKm: Math.max(0, base.metroKm + (mods.metroKmAdjustment ?? 0)),
+    electricityKwh: Math.max(0, base.electricityKwh + (mods.electricityKwhAdjustment ?? 0)),
+    acHoursPerDay: Math.max(0, base.acHoursPerDay + (mods.acHoursAdjustment ?? 0)),
+    redMeatPerWeek: Math.max(0, base.redMeatPerWeek + (mods.redMeatMealsAdjustment ?? 0)),
+    shortFlights: Math.max(0, base.shortFlights + (mods.shortFlightsAdjustment ?? 0)),
+    foodWaste: shiftEnum(wasteOrder, base.foodWaste, mods.foodWasteSteps ?? 0),
+    recycling: shiftEnum(recyclingOrder, base.recycling, mods.recyclingSteps ?? 0),
+  };
 }
 
 export function simulateImpact(baseAssessment: Assessment, mods: SimulationModifiers): { originalTotal: number; simulatedTotal: number; savingsKg: number } {
   const original = calculateBreakdown(baseAssessment);
-  
-  // Clone the assessment data structure safely
-  const simulatedAssessment: Assessment = {
-    ...baseAssessment,
-    carKm: Math.max(0, baseAssessment.carKm + (mods.carKmAdjustment ?? 0)),
-    electricityKwh: Math.max(0, baseAssessment.electricityKwh + (mods.electricityKwhAdjustment ?? 0)),
-    redMeatPerWeek: Math.max(0, baseAssessment.redMeatPerWeek + (mods.redMeatMealsAdjustment ?? 0)),
-  };
-
-  const simulated = calculateBreakdown(simulatedAssessment);
-  
+  const simulated = calculateBreakdown(applySimulation(baseAssessment, mods));
   return {
     originalTotal: original.total,
     simulatedTotal: simulated.total,
-    savingsKg: round(Math.max(0, original.total - simulated.total))
+    savingsKg: round(Math.max(0, original.total - simulated.total)),
   };
 }
+

@@ -6,7 +6,7 @@ import { getHistory, clearHistory, type StoredEntry } from "@/lib/cc-storage";
 export const Route = createFileRoute("/progress")({
   head: () => ({
     meta: [
-      { title: "Progress — Carbon Compass" },
+      { title: "Your Carbon Journey — Carbon Compass" },
       { name: "description", content: "Track your carbon footprint over time and watch each category trend." },
     ],
   }),
@@ -34,7 +34,7 @@ function ProgressPage() {
     <div className="mx-auto max-w-6xl px-5 py-12">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-3xl font-semibold text-leaf-600">Your progress</h1>
+          <h1 className="font-display text-3xl font-semibold text-leaf-600">Your Carbon Journey</h1>
           <p className="mt-1 text-sm text-muted-foreground">Every assessment lives here so you can see your direction over time.</p>
         </div>
         {history.length > 0 && (
@@ -47,9 +47,9 @@ function ProgressPage() {
 
       {history.length === 0 ? (
         <div className="card-soft mt-8 p-12 text-center">
-          <div className="text-5xl">🌱</div>
+          <CompassIcon className="mx-auto h-14 w-14 text-leaf-500" />
           <h2 className="mt-4 font-display text-xl font-semibold text-leaf-600">No assessments yet</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Take your first assessment to start tracking.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Take your first assessment to set your bearings.</p>
           <Link to="/" className="mt-5 inline-block rounded-lg bg-leaf-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-leaf-600">Start assessment</Link>
         </div>
       ) : (
@@ -124,14 +124,15 @@ function ProgressPage() {
                   <YAxis tick={{ fontSize: 12 }} />
                   <Tooltip />
                   <Legend />
-                  <Bar dataKey="Energy" stackId="a" fill="#438F59" />
+                  <Bar dataKey="Energy" stackId="a" fill="#F5B841" />
                   <Bar dataKey="Transportation" stackId="a" fill="#55A96F" />
                   <Bar dataKey="Food" stackId="a" fill="#97C79A" />
-                  <Bar dataKey="Waste" stackId="a" fill="#B7D3B8" />
+                  <Bar dataKey="Waste" stackId="a" fill="#2BA39A" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
+
 
           <div className="card-soft overflow-hidden">
             <h2 className="px-6 pt-6 font-display text-lg font-semibold text-leaf-600">Assessment history</h2>
@@ -165,5 +166,28 @@ function ProgressPage() {
         </div>
       )}
     </div>
+  );
+}
+
+function CompassIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="9" />
+      <polygon points="14.5 9.5 9.5 11.5 9.5 14.5 14.5 12.5 14.5 9.5" fill="currentColor" stroke="none" opacity="0.85" />
+      <line x1="12" y1="3" x2="12" y2="5" />
+      <line x1="12" y1="19" x2="12" y2="21" />
+      <line x1="3" y1="12" x2="5" y2="12" />
+      <line x1="19" y1="12" x2="21" y2="12" />
+    </svg>
   );
 }
