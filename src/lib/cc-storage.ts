@@ -31,9 +31,18 @@ export function getHistory(): StoredEntry[] {
 
 export function saveEntry(entry: StoredEntry) {
   if (typeof window === "undefined") return;
-  const list = getHistory();
-  list.push(entry);
-  localStorage.setItem(KEY_HISTORY, JSON.stringify(list));
+ export function saveEntry(entry: StoredEntry) {
+  if (typeof window === "undefined") return;
+
+  const history = getHistory();
+
+  const updatedHistory = [...history, entry];
+
+  localStorage.setItem(
+    KEY_HISTORY,
+    JSON.stringify(updatedHistory)
+  );
+}
 }
 
 export function clearHistory() {
