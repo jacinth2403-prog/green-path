@@ -239,6 +239,22 @@ describe("buildActionPlan", () => {
     expect(plan[0].title.toLowerCase()).toMatch(/led|smart/);
   });
 
+  it("LED branch with major willingness includes renewable tariff", () => {
+    const a = makeAssessment({ improveArea: "energy", willingness: "major", acHoursPerDay: 1 });
+    const plan = buildActionPlan(calculateBreakdown(a), a);
+    expect(plan[0].title.toLowerCase()).toMatch(/renewable|smart/);
+  });
+
+  it("food focus meal scaling: small=1 meal, major=at least redMeat count", () => {
+    const aSmall = makeAssessment({ improveArea: "food", willingness: "small", redMeatPerWeek: 5 });
+    const planSmall = buildActionPlan(calculateBreakdown(aSmall), aSmall);
+    expect(planSmall[0].title).toMatch(/Swap 1 red-meat meal/);
+
+    const aMajor = makeAssessment({ improveArea: "food", willingness: "major", redMeatPerWeek: 7 });
+    const planMajor = buildActionPlan(calculateBreakdown(aMajor), aMajor);
+    expect(planMajor[0].title).toMatch(/Swap 7 red-meat meals/);
+  });
+
   it("recommends meat swap for food focus when red meat > 0", () => {
     const a = makeAssessment({ improveArea: "food", willingness: "moderate", redMeatPerWeek: 5 });
     const plan = buildActionPlan(calculateBreakdown(a), a);
