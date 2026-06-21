@@ -6,7 +6,7 @@ import { getHistory, clearHistory, type StoredEntry } from "@/lib/cc-storage";
 export const Route = createFileRoute("/progress")({
   head: () => ({
     meta: [
-      { title: "Progress — Carbon Compass" },
+      { title: "Your Carbon Journey — Carbon Compass" },
       { name: "description", content: "Track your carbon footprint over time and watch each category trend." },
     ],
   }),
