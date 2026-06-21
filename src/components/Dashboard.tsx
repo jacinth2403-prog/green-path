@@ -68,17 +68,17 @@ export function Dashboard({ assessment, breakdown, onRetake }: Props) {
 
       {/* Insights */}
       <div>
-        <h3 className="mb-3 font-display text-xl font-semibold text-leaf-600">Key insights</h3>
-        <div className="grid gap-4 md:grid-cols-3">
-          <InsightCard icon="🔍" title="Largest contributor" body={insights.largestContributor} />
-          <InsightCard icon="🚀" title="Biggest opportunity" body={insights.biggestOpportunity} />
-          <InsightCard icon="✅" title="Existing strength" body={insights.existingStrength} />
+        <h3 className="mb-3 font-display text-xl font-semibold text-leaf-600">Personalized Insights</h3>
+        <div className="grid gap-4 md:grid-cols-2">
+          <InsightCard icon="🔍" title="Largest Contributor" body={insights.largestContributor} />
+          <InsightCard icon="🚀" title="Biggest Opportunity" body={insights.biggestOpportunity} />
         </div>
       </div>
 
       {/* Action plan */}
       <div>
-        <h3 className="mb-3 font-display text-xl font-semibold text-leaf-600">Personalized action plan</h3>
+        <h3 className="mb-2 font-display text-xl font-semibold text-leaf-600">Recommended Actions</h3>
+        <p className="mb-3 text-sm text-muted-foreground">These recommendations are tailored to the areas contributing most to your carbon footprint.</p>
         <div className="grid gap-4 md:grid-cols-3">
           {actions.map((a) => (
             <div key={a.title} className="card-soft p-5">
